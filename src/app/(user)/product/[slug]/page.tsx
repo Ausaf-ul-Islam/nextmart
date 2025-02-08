@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { groq } from "next-sanity";
 import Image from "next/image";
 import Container from "@/components/Container";
@@ -10,32 +9,24 @@ import { urlFor } from "@/sanity/lib/image";
 import { getBestSellersData } from "@/lib/getData";
 import type { ProductData } from "@/types";
 
-interface Props {
+// ✅ Updated PageProps to include both params and searchParams as promises
+interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export const generateMetadata = async ({
+export default async function SingleProductPage({
   params,
-}: Props): Promise<Metadata> => {
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
-  const query = groq`*[_type == 'product' && slug.current == $slug][0]`;
-  const product: ProductData = await client.fetch(query, { slug });
+  await searchParams;
 
-  return {
-    title: product?.title || "Product Not Found",
-    description: product?.description || "Product details",
-  };
-};
-
-const SingleProductPage = async ({ params }: Props) => {
-  const { slug } = await params;
-
-  // Fetch product and best sellers data
+  // Sanity query to fetch product data
   const query = groq`*[_type == 'product' && slug.current == $slug][0]{
-    ...
+ ...
   }`;
-  const product: ProductData = await client.fetch(query, { slug });
+  const product: ProductData | null = await client.fetch(query, { slug });
   const bestSellersData: ProductData[] = await getBestSellersData();
 
   // Handle missing product
@@ -49,13 +40,17 @@ const SingleProductPage = async ({ params }: Props) => {
 
   return (
     <>
-      {/* Product Details Section with bg-bgLight */}
+      {/* Product Details Section */}
       <Container className="my-10 p-6 rounded-xl bg-bgLight border-b-4 border-lightOrange">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
           {/* Product Image */}
           <div className="h-full xl:col-span-2">
             <Image
-              src={urlFor(product?.image).url() || "/placeholder.svg"}
+              src={
+                product?.image
+                  ? urlFor(product.image).url()
+                  : "/placeholder.svg"
+              }
               alt={product.title || "Product image"}
               className="w-full h-full object-contain rounded-lg"
               width={500}
@@ -71,19 +66,17 @@ const SingleProductPage = async ({ params }: Props) => {
         </div>
       </Container>
 
-      {/* Best Sellers Section with white background */}
+      {/* Best Sellers Section */}
       {bestSellersData?.length > 0 && (
         <Container className="my-10 p-6 rounded-xl bg-white">
           <Headings title="Best" subtitle="Sellers" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bestSellersData?.map((item) => (
-              <ProductCard item={item} key={item?._id} />
+            {bestSellersData.map((item) => (
+              <ProductCard item={item} key={item._id} />
             ))}
           </div>
         </Container>
       )}
     </>
   );
-};
-
-export default SingleProductPage;
+}
