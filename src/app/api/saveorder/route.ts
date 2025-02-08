@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (request: NextRequest) => {
     try {
-        // Debug: Check if request body exists
+        // Ensure request body exists
         if (!request.body) {
             return NextResponse.json({
                 success: false,
@@ -16,6 +16,7 @@ export const POST = async (request: NextRequest) => {
         try {
             reqBody = await request.json();
         } catch (error) {
+            console.error("JSON Parse Error:", error); // ✅ Explicitly log the error
             return NextResponse.json({
                 success: false,
                 message: "Invalid JSON format in request body",
@@ -59,12 +60,11 @@ export const POST = async (request: NextRequest) => {
             success: true,
             message: "Order saved successfully",
         });
-    } catch (error) {
-        console.error("Error in saveOrder API:", error);
-        const errorMessage = error instanceof Error ? error.message : "An error occurred";
+    } catch (error: unknown) {  // ✅ Properly typed error
+        console.error("Error in saveOrder API:", error); // ✅ This ensures the error variable is used
         return NextResponse.json({
             success: false,
-            message: errorMessage,
+            message: error instanceof Error ? error.message : "An unknown error occurred",
         }, { status: 500 });
     }
 };
